@@ -34,7 +34,10 @@ CSS = (
     "font:1rem/1.5 system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;overflow-wrap:anywhere}"
     "main,header{max-width:60rem;margin:0 auto}"
     "h1{font-size:1.6rem;margin:0 0 .25rem}"
-    ".gen{color:var(--muted);margin:0 0 1.5rem}"
+    ".gen{color:var(--muted);margin:0 0 .75rem}"
+    ".obnovit{display:inline-block;margin:0 0 1.5rem;padding:.5rem 1rem;border:2px solid var(--border);"
+    "border-radius:6px;background:var(--box);color:var(--head);font-weight:600;text-decoration:none}"
+    ".obnovit:hover,.obnovit:focus{text-decoration:underline;outline:3px solid var(--border);outline-offset:2px}"
     "section{border:2px solid var(--border);border-radius:8px;background:var(--box);"
     "padding:1rem;margin:0 0 2rem}"
     "section>h2{font-size:1.35rem;margin:0 0 1rem;padding-bottom:.5rem;color:var(--head);"
@@ -231,6 +234,9 @@ def _sec_stat(d):
     return _section("statistiky", "Statistiky a finance", body)
 
 
+OBNOVIT_URL = "https://github.com/metropolitnidivadlo/email-asistent/actions/workflows/kokpit.yml"
+
+
 def render(data):
     gen = data.get("generated") or config.now_prague().isoformat()
     note = " (náhled z dat zkoušky)" if data.get("source") == "zkouska" else ""
@@ -239,9 +245,14 @@ def render(data):
         "<!DOCTYPE html>\n<html lang=\"cs\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
         "<meta name=\"color-scheme\" content=\"light dark\"><meta name=\"robots\" content=\"noindex\">"
+        "<meta http-equiv=\"refresh\" content=\"300\">"
         "<title>Kokpit – Metropolitní divadlo</title>"
         f"<style>{CSS}</style></head><body>"
         "<header><h1>Kokpit – Metropolitní divadlo</h1>"
-        f"<p class=\"gen\">Vygenerováno: {e(_fmt_full(gen))} ({e(config.TZ_NAME)}){e(note)}</p></header>"
+        f"<p class=\"gen\">Aktualizováno: {e(_fmt_full(gen))} ({e(config.TZ_NAME)}){e(note)}"
+        " · data se obnovují každých 15 min, stránka se sama načte každých 5 min</p>"
+        f"<p><a class=\"obnovit\" href=\"{e(OBNOVIT_URL)}\" target=\"_blank\" rel=\"noopener\">"
+        "Aktualizovat teď</a> <span class=\"gen\">(na GitHubu klikněte Run workflow, hotovo do ~1 min)</span></p>"
+        "</header>"
         f"<main>{sections}</main></body></html>\n"
     )

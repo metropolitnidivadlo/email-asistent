@@ -2,7 +2,7 @@ name: Kokpit
 
 on:
   schedule:
-    - cron: "*/30 4-21 * * *"   # UTC
+    - cron: "*/15 4-21 * * *"   # UTC (každých 15 min, cca 5–22 h Praha)
   workflow_dispatch:
 
 permissions:
