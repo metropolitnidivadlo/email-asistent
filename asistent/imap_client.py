@@ -1,6 +1,7 @@
 """IMAP klient pro schránku WEDOS. Čtení vždy přes BODY.PEEK (nemění \\Seen)."""
 import email
 import imaplib
+import os
 import re
 import sys
 import time
@@ -252,7 +253,13 @@ class Mailbox:
 
     def fetch_unprocessed(self, folder="INBOX"):
         self._select(folder, readonly=False)
-        return self._fetch_uids(self._search("UNKEYWORD", config.DONE_KEYWORD))
+        # Pojistka: jen zprávy novější než bod spuštění (ASISTENT_OD_UID). Bez něj nic.
+        od = os.environ.get("ASISTENT_OD_UID", "").strip()
+        if not od.isdigit():
+            print("ASISTENT_OD_UID není nastaveno – nic se nezpracuje.")
+            return []
+        uids = [u for u in self._search("UNKEYWORD", config.DONE_KEYWORD) if int(u) > int(od)]
+        return self._fetch_uids(uids)
 
     def fetch_sent_samples(self, n=30):
         texts = []

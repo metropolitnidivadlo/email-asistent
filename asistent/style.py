@@ -25,6 +25,10 @@ def build_profile(samples):
 
 
 def load_cached():
+    import os
+    env = os.environ.get("ASISTENT_STYL", "").strip()  # GitHub Secret (data/ v Actions nepřetrvá)
+    if env:
+        return env
     try:
         return STYL_SOUBOR.read_text(encoding="utf-8")
     except OSError:

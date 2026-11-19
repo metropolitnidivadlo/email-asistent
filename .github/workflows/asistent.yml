@@ -1,9 +1,9 @@
 name: E-mailový asistent
 
 on:
-  # OSTRÝ PROVOZ ZATÍM VYPNUTÝ – zapne se odkomentováním po schválení uživatelem.
-  # schedule:
-  #   - cron: "*/30 4-21 * * *"   # UTC; skutečné okno 7-22 h Europe/Prague hlídá kód
+  # Ostrý provoz schválen uživatelem 19. 11. 2026.
+  schedule:
+    - cron: "*/30 4-21 * * *"   # UTC; skutečné okno 7-22 h Europe/Prague hlídá kód
   workflow_dispatch:
 
 concurrency:
@@ -28,6 +28,8 @@ jobs:
         run: python run.py ostre
         env:
           ASISTENT_OSTRE: "1"
+          ASISTENT_OD_UID: ${{ vars.ASISTENT_OD_UID }}
+          ASISTENT_STYL: ${{ secrets.ASISTENT_STYL }}
           IMAP_USER: ${{ secrets.IMAP_USER }}
           IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
