@@ -2,6 +2,12 @@
 import json
 import urllib.request
 
+try:  # lokálně na Windows: certifikáty ze systému (antivirus kontroluje HTTPS)
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
+
 from .secrets import get_secret
 
 
