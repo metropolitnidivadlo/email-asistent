@@ -1,0 +1,61 @@
+name: Kokpit
+
+on:
+  schedule:
+    - cron: "*/30 4-21 * * *"   # UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  kokpit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: pip install -r requirements.txt
+      - name: Kontrola hesla kokpitu
+        run: |
+          if [ -z "$KOKPIT_HESLO" ]; then echo "Chybí secret KOKPIT_HESLO, nic se nepublikuje."; exit 1; fi
+        env:
+          KOKPIT_HESLO: ${{ secrets.KOKPIT_HESLO }}
+      - name: Vygenerovat kokpit (jen čtení schránky)
+        run: python run.py kokpit --vystup site/index.html
+        env:
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+          IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+      - name: Zašifrovat heslem
+        run: >
+          npx --yes staticrypt@3 site/index.html -p "$KOKPIT_HESLO" -d site/out --short --remember 30
+          --template-title "Kokpit – Metropolitní divadlo"
+          --template-instructions "Zadejte heslo ke kokpitu."
+        env:
+          KOKPIT_HESLO: ${{ secrets.KOKPIT_HESLO }}
+      - name: Ověřit, že artifact obsahuje jen zašifrovanou stránku
+        run: |
+          test -f site/out/index.html
+          ls site/out
+          if grep -q "Kokpit – Metropolitní divadlo</h1>" site/out/index.html; then echo "Nešifrovaný obsah!"; exit 1; fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/out
+      - name: Nasadit na GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

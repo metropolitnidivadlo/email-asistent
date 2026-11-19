@@ -1,0 +1,35 @@
+name: E-mailový asistent
+
+on:
+  # OSTRÝ PROVOZ ZATÍM VYPNUTÝ – zapne se odkomentováním po schválení uživatelem.
+  # schedule:
+  #   - cron: "*/30 4-21 * * *"   # UTC; skutečné okno 7-22 h Europe/Prague hlídá kód
+  workflow_dispatch:
+
+concurrency:
+  group: asistent
+  cancel-in-progress: false
+
+jobs:
+  beh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: pip install -r requirements.txt
+      - name: Ostrý běh
+        run: python run.py ostre
+        env:
+          ASISTENT_OSTRE: "1"
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+          IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
