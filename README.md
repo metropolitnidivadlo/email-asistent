@@ -57,6 +57,20 @@ heslem (staticrypt). Schránku jen čte (readonly, bez těl zpráv), nic neodes�
 3. Otevřete v prohlížeči `https://api.telegram.org/bot<TOKEN>/getUpdates` a najděte `"chat":{"id":...}` - to je `TELEGRAM_CHAT_ID`.
 4. Obě hodnoty uložte jako GitHub Secrets (nebo do Klíčenky pod názvy `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`).
 
+## Souhrny a úkoly
+
+Repo je veřejné, proto se souhrny a úkoly ukládají soukromě do schránky (plochých složek, vytváří je
+`slozky --vytvor` a `ostre`): `Asistent - Souhrny` a `Asistent - Úkoly`. Každá zpráva obsahuje čitelný text
+a na konci JSON mezi řádky `---JSON---` a `---/JSON---`. Nic se neodesílá, jen se ukládá (APPEND, `\Seen`).
+
+- `ostre` po zpracování ≥ 1 zprávy uloží souhrn (selhání uložení běh neshodí).
+- `python run.py souhrny --dni 1 [--vystup data/souhrny.json]` - readonly přečte souhrny za N dní.
+- `python run.py ukoly-ulozit soubor.json [--telegram]` - zvaliduje (max 30 úkolů, text max 300 znaků,
+  priorita vysoká/střední/nízká, termín `YYYY-MM-DD` nebo null), uloží a volitelně pošle do Telegramu.
+  Formát: `{"vytvoreno": "...", "ukoly": [{"text", "termin", "priorita", "zdroj"}], "poznamka": "..."}`.
+- `python run.py ukoly` - readonly vypíše poslední uložené úkoly.
+- Kokpit v sekci „Dnes“ zobrazuje poslední úkoly (vysoká priorita zvýrazněna, prošlé termíny „po termínu“).
+
 ## Rozšíření
 
 Nové sektory (finance, vstupenky) přidejte jako modul v `asistent/modules/` s funkcemi

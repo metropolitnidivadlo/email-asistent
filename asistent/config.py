@@ -21,7 +21,12 @@ FOLDERS = {
 FOLDER_NEWSLETTER = "Newslettery"
 FOLDER_OTHER = "Ostatní"
 FOLDER_DRAFTS = "Koncepty"
-SENT_FOLDERS = ["Odeslané položky", "Sent Items"]
+# Soukromé úložiště souhrnů a úkolů ve schránce (repo je veřejné, data v něm být nesmí).
+# Ploché názvy bez oddělovače hierarchie.
+FOLDER_SOUHRNY = "Asistent - Souhrny"
+FOLDER_UKOLY = "Asistent - Úkoly"
+SYSTEM_FOLDERS = [FOLDER_SOUHRNY, FOLDER_UKOLY]
+SENT_FOLDERS =["Odeslané položky", "Sent Items"]
 
 DONE_KEYWORD = "$AsistentHotovo"
 

@@ -3,8 +3,9 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 
-from . import ai, classify, config, drafts, modules, style, telegram
+from . import ai, classify, config, drafts, modules, souhrny, style, telegram
 from .imap_client import Mailbox
 from .secrets import get_secret
 
@@ -74,7 +75,8 @@ def cmd_ostre(args):
     mb = Mailbox().connect()
     results, st, chyby = [], None, 0
     try:
-        zbyva = mb.ensure_folders(list(config.FOLDERS) + [config.FOLDER_DRAFTS], create=True)
+        zbyva = mb.ensure_folders(list(config.FOLDERS) + [config.FOLDER_DRAFTS] + config.SYSTEM_FOLDERS,
+                                  create=True)
         if zbyva:
             print(f"Nepodařilo se vytvořit složky: {', '.join(zbyva)}")
         emails = mb.fetch_unprocessed("INBOX")
@@ -95,10 +97,14 @@ def cmd_ostre(args):
                 mb.add_flag(em.uid, config.DONE_KEYWORD)
                 mb.move(em.uid, r["folder"])
                 modules.on_email(em, r)
-                results.append({"predmet": em.subject, "od": em.from_addr, **r})
+                results.append({"predmet": em.subject, "od": em.from_addr, "uid": em.uid,
+                                "datum": em.date, **r})
             except Exception as e:
                 chyby += 1
                 print(f"  Zpráva UID {em.uid} selhala: {type(e).__name__}", file=sys.stderr)
+        if results:  # soukromý souhrn do schránky; selhání nesmí shodit běh
+            if souhrny.save_summary(mb, results):
+                print(f"Souhrn uložen do '{config.FOLDER_SOUHRNY}'.")
     finally:
         mb.logout()
     modules.on_run_end(results)
@@ -143,7 +149,7 @@ def cmd_vzorky(args):
 def cmd_slozky(args):
     mb = Mailbox().connect()
     try:
-        potreba = list(config.FOLDERS) + [config.FOLDER_DRAFTS]
+        potreba = list(config.FOLDERS) + [config.FOLDER_DRAFTS] + config.SYSTEM_FOLDERS
         for f in potreba:
             real = mb.resolve(f)
             print(f"  {'OK     ' if real else 'CHYBÍ  '} {f}" + (f"  ({real})" if real and real != f else ""))
@@ -175,6 +181,57 @@ def cmd_kokpit(args):
     print(f"Kokpit uložen do {out}")
 
 
+def cmd_souhrny(args):
+    """Readonly přečte souhrny z FOLDER_SOUHRNY za posledních N dní."""
+    mb = Mailbox().connect()
+    try:
+        bloky = souhrny.read_blocks(mb, config.FOLDER_SOUHRNY, since=souhrny.since_days(args.dni))
+    finally:
+        mb.logout()
+    out = Path(args.vystup)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(bloky, ensure_ascii=False, indent=2), encoding="utf-8")
+    zprav = sum(len(b.get("zpravy", [])) for b in bloky if isinstance(b, dict))
+    print(f"Souhrnů: {len(bloky)}, zpráv celkem: {zprav}. Uloženo do {out}")
+
+
+def cmd_ukoly_ulozit(args):
+    try:
+        data = json.loads(Path(args.soubor).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        sys.exit(f"Soubor {args.soubor} nelze načíst jako JSON ({type(e).__name__}).")
+    obj, chyby = souhrny.validate_tasks(data)
+    if chyby:
+        sys.exit("Neplatný soubor s úkoly:\n  " + "\n  ".join(chyby))
+    if not obj["vytvoreno"]:
+        obj["vytvoreno"] = config.now_prague().isoformat(timespec="minutes")
+    mb = Mailbox().connect()
+    try:
+        mb.ensure_folders([config.FOLDER_UKOLY], create=True)
+        msg = souhrny.build_tasks_message(obj, mb.user)
+        ok = souhrny.append_seen(mb, config.FOLDER_UKOLY, msg)
+    finally:
+        mb.logout()
+    if not ok:
+        sys.exit(f"Úkoly se nepodařilo uložit do '{config.FOLDER_UKOLY}'.")
+    print(f"Uloženo {len(obj['ukoly'])} úkolů do '{config.FOLDER_UKOLY}'.")
+    if args.telegram:
+        telegram.send_summary(souhrny.telegram_text(obj))
+
+
+def cmd_ukoly(args):
+    mb = Mailbox().connect()
+    try:
+        obj = souhrny.read_latest_tasks(mb)
+    finally:
+        mb.logout()
+    if not obj:
+        print("Zatím žádné uložené úkoly.")
+        return
+    print(f"Úkoly vytvořeno: {obj.get('vytvoreno')}")
+    print(souhrny.format_tasks(obj.get("ukoly", []), obj.get("poznamka")) or "Žádné úkoly.")
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="run.py", description="E-mailový asistent Metropolitního divadla "
                                 "(nikdy neodesílá e-maily, jen třídí a ukládá koncepty).")
@@ -198,6 +255,16 @@ def build_parser():
     k.add_argument("--z-zkousky", action="store_true", help="data z data/zkouska_ai.json, bez připojení")
     k.add_argument("--vystup", default="site/index.html", help="výstupní soubor (výchozí site/index.html)")
     k.set_defaults(fn=cmd_kokpit)
+    so = sub.add_parser("souhrny", help="přečte souhrny ze složky souhrnů (jen čtení)")
+    so.add_argument("--dni", type=int, default=1, help="za kolik posledních dní (výchozí 1)")
+    so.add_argument("--vystup", default="data/souhrny.json", help="výstupní JSON (výchozí data/souhrny.json)")
+    so.set_defaults(fn=cmd_souhrny)
+    uu = sub.add_parser("ukoly-ulozit", help="uloží úkoly ze souboru JSON do složky úkolů")
+    uu.add_argument("soubor")
+    uu.add_argument("--telegram", action="store_true", help="pošle seznam do Telegramu")
+    uu.set_defaults(fn=cmd_ukoly_ulozit)
+    uk = sub.add_parser("ukoly", help="vypíše poslední uložené úkoly (jen čtení)")
+    uk.set_defaults(fn=cmd_ukoly)
     return p
 
 

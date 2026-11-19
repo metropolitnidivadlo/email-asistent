@@ -191,8 +191,20 @@ def collect(mb, now=None):
              if sent >= received[i]]
     avg = round(sum(hours) / len(hours), 1) if hours else None
 
-    return build(folder_msgs, stat, drafts, now, avg, len(hours), _read_log_important(now.date(), tz),
+    data = build(folder_msgs, stat, drafts, now, avg, len(hours), _read_log_important(now.date(), tz),
                  own, "imap", total)
+    data["ukoly"] = _read_ukoly(mb)
+    return data
+
+
+def _read_ukoly(mb):
+    """Poslední zpráva z FOLDER_UKOLY (readonly, BODY.PEEK); chyba = prázdné úkoly."""
+    from . import souhrny
+    obj = souhrny.read_latest_tasks(mb)
+    if not isinstance(obj, dict) or not isinstance(obj.get("ukoly"), list):
+        return {"vytvoreno": None, "ukoly": [], "poznamka": None}
+    return {"vytvoreno": obj.get("vytvoreno"), "ukoly": [u for u in obj["ukoly"] if isinstance(u, dict)],
+            "poznamka": obj.get("poznamka")}
 
 
 def _fold_name(od):
@@ -220,6 +232,7 @@ def from_zkouska(path):
     for name in config.FOLDERS:
         folder_msgs[name] = [m for m in msgs if m["folder"] == name]
     data = build(folder_msgs, msgs, drafts, now, None, 0, (), "", "zkouska")
+    data["ukoly"] = {"vytvoreno": None, "ukoly": [], "poznamka": None}
     data["generated"] = config.now_prague().isoformat()
     data["reference_now"] = now.isoformat()
     return data

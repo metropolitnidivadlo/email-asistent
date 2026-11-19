@@ -141,7 +141,45 @@ def _sec_dnes(d):
                    f"</tr></thead><tbody>{rows}</tbody></table>")
     else:
         dr_html = "<h3>Čekající koncepty</h3><p class=\"muted\">Žádné koncepty nečekají.</p>"
-    return _section("dnes", "Dnes", imp_html + dr_html)
+    return _section("dnes", "Dnes", _ukoly_html(d) + imp_html + dr_html)
+
+
+def _today(d):
+    try:
+        return datetime.fromisoformat(d.get("generated")).date()
+    except Exception:
+        return config.now_prague().date()
+
+
+def _ukoly_html(d):
+    """Podsekce 'Úkoly a připomínky'; vysoká priorita zvýrazněná textem i barvou, prošlé termíny 'po termínu'."""
+    uk = d.get("ukoly") or {}
+    items = uk.get("ukoly") or []
+    if not items:
+        return "<h3>Úkoly a připomínky</h3><p class=\"muted\">Zatím žádné úkoly.</p>"
+    today = _today(d).isoformat()
+    order = {"vysoká": 0, "střední": 1, "nízká": 2}
+    items = sorted(items, key=lambda u: (order.get(u.get("priorita"), 9), u.get("termin") or "9999-99-99"))
+    lis = []
+    for u in items:
+        prio = u.get("priorita")
+        badge = "<span class=\"badge\">Vysoká priorita</span>" if prio == "vysoká" else (
+            f"<span class=\"muted\">({e(prio)})</span> " if prio else "")
+        txt = f"<strong>{e(u.get('text'))}</strong>" if prio == "vysoká" else e(u.get("text"))
+        extra = ""
+        t = u.get("termin")
+        if t:
+            if str(t) < today:
+                extra += f" <span class=\"badge\">po termínu</span> termín {e(t)}"
+            else:
+                extra += f" <span class=\"muted\">termín {e(t)}</span>"
+        if u.get("zdroj"):
+            extra += f" <span class=\"muted\">[{e(u['zdroj'])}]</span>"
+        lis.append(f"<li>{badge}{txt}{extra}</li>")
+    note = f"<p class=\"muted\">{e(uk['poznamka'])}</p>" if uk.get("poznamka") else ""
+    created = (f"<p class=\"muted\">Vytvořeno: {e(_fmt_full(uk['vytvoreno']))}</p>"
+               if uk.get("vytvoreno") else "")
+    return f"<h3>Úkoly a připomínky</h3><ul>{''.join(lis)}</ul>{note}{created}"
 
 
 def _sec_posta(d):
