@@ -182,8 +182,10 @@ def collect(mb, now=None):
 
     received = {m["message_id"]: m["dt"] for m in stat if m["message_id"]}
     first_reply = {}
+    sent_msgs = []
     for name in config.SENT_FOLDERS:
         for m in _read_folder(mb, name, since, tz):
+            sent_msgs.append(m)
             irt = m["in_reply_to"]
             if irt in received and (irt not in first_reply or m["dt"] < first_reply[irt]):
                 first_reply[irt] = m["dt"]
@@ -194,6 +196,13 @@ def collect(mb, now=None):
     data = build(folder_msgs, stat, drafts, now, avg, len(hours), _read_log_important(now.date(), tz),
                  own, "imap", total)
     data["ukoly"] = _read_ukoly(mb)
+    try:
+        from . import kontakty
+        kont = kontakty.nacist(mb)
+        kontakty.oznac_v_kontaktu(kont, kontakty.domeny_zprav(stat + sent_msgs, own))
+    except Exception:
+        kont = []
+    data["kontakty"] = kont
     return data
 
 
@@ -233,6 +242,11 @@ def from_zkouska(path):
         folder_msgs[name] = [m for m in msgs if m["folder"] == name]
     data = build(folder_msgs, msgs, drafts, now, None, 0, (), "", "zkouska")
     data["ukoly"] = {"vytvoreno": None, "ukoly": [], "poznamka": None}
+    data["kontakty"] = []
+    soubor = config.DATA_DIR / "kontakty" / "klienti_cr.csv"
+    if soubor.exists():
+        from . import kontakty
+        data["kontakty"] = kontakty.oznac_v_kontaktu(kontakty.nacist_soubor(soubor), set())
     data["generated"] = config.now_prague().isoformat()
     data["reference_now"] = now.isoformat()
     return data

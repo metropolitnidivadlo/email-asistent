@@ -1,6 +1,10 @@
 """Vykreslení kokpitu do jednoho samostatného HTML (inline CSS, bez JS; jediný externí zdroj je písmo Karla z Google Fonts)."""
+import re
+import unicodedata
+from collections import Counter
 from datetime import datetime
 from html import escape as _esc
+from urllib.parse import quote
 
 from . import config
 
@@ -57,6 +61,10 @@ CSS = (
     ".badge{display:inline-block;background:var(--badge_bg);color:var(--badge_fg);"
     "border-radius:0;padding:0 .4rem;font-size:.8rem;font-weight:700;margin-right:.35rem}"
     ".muted{color:var(--muted)}"
+    "details{border:1px solid var(--rule);margin:0 0 .5rem;padding:.25rem .5rem;background:var(--bg)}"
+    "summary{cursor:pointer;font-weight:600;padding:.25rem 0}"
+    "summary:focus{outline:3px solid var(--border);outline-offset:2px}"
+    "details table{margin:.5rem 0}"
     "p{margin:.25rem 0 .75rem}"
     "@media (max-width:480px){body{padding:.5rem}.pruh{margin:-.5rem -.5rem 1rem}section{padding:.6rem}"
     "table{font-size:.8rem}th,td{padding:.25rem .3rem}}"
@@ -238,13 +246,71 @@ def _sec_stat(d):
     return _section("statistiky", "Statistiky a finance", body)
 
 
-OBNOVIT_URL = "https://github.com/metropolitnidivadlo/email-asistent/actions/workflows/kokpit.yml"
+TYPY = {"divadlo": "divadlo", "kulturni_dum": "kulturní dům", "kulturni_centrum": "kulturní centrum",
+        "festival": "festival"}
+_EMAIL_RE = re.compile(r"^[^\s@<>\"']+@[^\s@<>\"']+\.[^\s@<>\"']+$")
+
+
+def _typ(t):
+    return TYPY.get((t or "").strip().lower(), "jiné")
+
+
+def _link_web(url):
+    url = (url or "").strip()
+    if not url:
+        return ""
+    if re.match(r"^https?://", url, re.I):
+        return f"<a href=\"{e(url)}\" target=\"_blank\" rel=\"noopener\">{e(url)}</a>"
+    return e(url)  # jiná schémata (javascript:, data: ...) jen jako text
+
+
+def _link_email(addr):
+    addr = (addr or "").strip()
+    if addr and _EMAIL_RE.match(addr):
+        return f"<a href=\"mailto:{e(quote(addr, safe='@+'))}\">{e(addr)}</a>"
+    return e(addr)
+
+
+def _kraj_key(k):
+    return unicodedata.normalize("NFKD", k).encode("ascii", "ignore").decode().lower()
+
+
+def _sec_prilezitosti(d):
+    kont = [k for k in (d.get("kontakty") or []) if isinstance(k, dict)]
+    if not kont:
+        return _section("prilezitosti", "Nové příležitosti",
+                        "<p class=\"muted\">Databáze kontaktů zatím není nahraná.</p>")
+    s_emailem = sum(1 for k in kont if (k.get("email") or "").strip())
+    v_kont = sum(1 for k in kont if k.get("v_kontaktu"))
+    typy = Counter(_typ(k.get("typ")) for k in kont)
+    typ_txt = ", ".join(f"{e(t)} {n}" for t, n in sorted(typy.items(), key=lambda x: (-x[1], x[0])))
+    body = (f"<p>Celkem: <strong>{len(kont)}</strong> · s e-mailem: <strong>{s_emailem}</strong> · "
+            f"v kontaktu: <strong>{v_kont}</strong></p><p>Podle typu: {typ_txt}</p>")
+    kraje = {}
+    for k in kont:
+        kraje.setdefault((k.get("kraj") or "").strip() or "Bez kraje", []).append(k)
+    for kraj in sorted(kraje, key=_kraj_key):
+        rows = []
+        for k in sorted(kraje[kraj], key=lambda x: (_kraj_key(x.get("mesto") or ""), _kraj_key(x.get("nazev") or ""))):
+            kontakt = [x for x in (_link_email(k.get("email")), e(k.get("telefon"))) if x]
+            stav = "<span class=\"badge\">v kontaktu</span>" if k.get("v_kontaktu") else "<span class=\"muted\">nový</span>"
+            rows.append(f"<tr><th scope=\"row\">{e(k.get('nazev'))}</th><td>{e(_typ(k.get('typ')))}</td>"
+                        f"<td>{e(k.get('mesto'))}</td><td>{'<br>'.join(kontakt)}</td>"
+                        f"<td>{_link_web(k.get('web'))}</td><td>{stav}</td></tr>")
+        body += (f"<details><summary>{e(kraj)} ({len(kraje[kraj])})</summary><table><thead><tr>"
+                 "<th scope=\"col\">Název</th><th scope=\"col\">Typ</th><th scope=\"col\">Město</th>"
+                 "<th scope=\"col\">Kontakt</th><th scope=\"col\">Web</th><th scope=\"col\">Stav</th>"
+                 f"</tr></thead><tbody>{''.join(rows)}</tbody></table></details>")
+    return _section("prilezitosti", "Nové příležitosti", body)
+
+
+OBNOVIT_URL ="https://github.com/metropolitnidivadlo/email-asistent/actions/workflows/kokpit.yml"
 
 
 def render(data):
     gen = data.get("generated") or config.now_prague().isoformat()
     note = " (náhled z dat zkoušky)" if data.get("source") == "zkouska" else ""
-    sections = _sec_dnes(data) + _sec_posta(data) + _sec_predstaveni(data) + _sec_stat(data)
+    sections = _sec_dnes(data) + _sec_posta(data) + _sec_predstaveni(data) + _sec_stat(data) + _sec_prilezitosti(data)
     return (
         "<!DOCTYPE html>\n<html lang=\"cs\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"

@@ -25,7 +25,8 @@ FOLDER_DRAFTS = "Koncepty"
 # Ploché názvy bez oddělovače hierarchie.
 FOLDER_SOUHRNY = "Asistent - Souhrny"
 FOLDER_UKOLY = "Asistent - Úkoly"
-SYSTEM_FOLDERS = [FOLDER_SOUHRNY, FOLDER_UKOLY]
+FOLDER_KONTAKTY = "Asistent - Kontakty"
+SYSTEM_FOLDERS = [FOLDER_SOUHRNY, FOLDER_UKOLY, FOLDER_KONTAKTY]
 SENT_FOLDERS =["Odeslané položky", "Sent Items"]
 
 DONE_KEYWORD = "$AsistentHotovo"

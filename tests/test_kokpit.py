@@ -50,7 +50,7 @@ class Render(unittest.TestCase):
         self.assertNotIn("<script>", out)
         self.assertNotIn("<img", out)
         self.assertIn('lang="cs"', out)
-        for h in ("Dnes", "Pošta", "Představení a doprava", "Statistiky a finance"):
+        for h in ("Dnes", "Pošta", "Představení a doprava", "Statistiky a finance", "Nové příležitosti"):
             self.assertIn(f">{h}</h2>", out)
 
 

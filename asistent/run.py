@@ -232,6 +232,40 @@ def cmd_ukoly(args):
     print(souhrny.format_tasks(obj.get("ukoly", []), obj.get("poznamka")) or "Žádné úkoly.")
 
 
+def cmd_kontakty_nahrat(args):
+    from . import kontakty
+    if not Path(args.csv).is_file():
+        sys.exit(f"Soubor {args.csv} neexistuje.")
+    mb = Mailbox().connect()
+    try:
+        ok, n = kontakty.nahrat(mb, args.csv)
+    finally:
+        mb.logout()
+    if not ok:
+        sys.exit(f"Kontakty se nepodařilo uložit do '{config.FOLDER_KONTAKTY}'.")
+    print(f"Nahráno {n} záznamů do '{config.FOLDER_KONTAKTY}'.")
+
+
+def cmd_kontakty(args):
+    from . import kontakty
+    mb = Mailbox().connect()
+    try:
+        kont = kontakty.nacist(mb)
+    finally:
+        mb.logout()
+    if not kont:
+        print("Databáze kontaktů zatím není nahraná.")
+        return
+    kraje, typy = kontakty.pocty(kont)
+    print(f"Kontaktů: {len(kont)}, s e-mailem: {sum(1 for k in kont if k['email'])}")
+    print("Podle kraje:")
+    for k, n in sorted(kraje.items()):
+        print(f"  {k}: {n}")
+    print("Podle typu:")
+    for k, n in sorted(typy.items(), key=lambda x: -x[1]):
+        print(f"  {k}: {n}")
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="run.py", description="E-mailový asistent Metropolitního divadla "
                                 "(nikdy neodesílá e-maily, jen třídí a ukládá koncepty).")
@@ -265,6 +299,11 @@ def build_parser():
     uu.set_defaults(fn=cmd_ukoly_ulozit)
     uk = sub.add_parser("ukoly", help="vypíše poslední uložené úkoly (jen čtení)")
     uk.set_defaults(fn=cmd_ukoly)
+    kn = sub.add_parser("kontakty-nahrat", help="nahraje CSV s kontakty jako novou verzi do schránky")
+    kn.add_argument("csv")
+    kn.set_defaults(fn=cmd_kontakty_nahrat)
+    kv = sub.add_parser("kontakty", help="vypíše počty z poslední verze kontaktů (jen čtení)")
+    kv.set_defaults(fn=cmd_kontakty)
     return p
 
 
