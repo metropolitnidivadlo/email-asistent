@@ -14,6 +14,7 @@ _FIELDS = "DATE FROM TO SUBJECT MESSAGE-ID IN-REPLY-TO"
 LATEST_N = 15
 MAX_PER_FOLDER = 400
 MAX_DRAFTS = 50
+PREVIEW_MAX = 600
 DAYS = 30
 
 
@@ -26,9 +27,10 @@ def _parse_headers(raw, flags=""):
     try:
         dt = parsedate_to_datetime(msg.get("Date"))
     except Exception:
-        return None
-    if dt is None:
-        return None
+        dt = None
+    if dt is None:  # koncepty bez hlavičky Date (starší verze asistenta) – ber jako teď
+        from datetime import datetime, timezone
+        dt = datetime.now(timezone.utc)
     name, addr = parseaddr(_dec(msg.get("From")))
     return {
         "dt": dt, "name": name.strip(), "addr": addr.lower(), "subject": _dec(msg.get("Subject")).strip(),
@@ -72,6 +74,35 @@ def _read_folder(mb, name, since, tz, limit=MAX_PER_FOLDER):
         return _fetch_headers(mb, uids, tz)
     except Exception:
         return []
+
+
+def _norm_subject(s):
+    return re.sub(r"^\s*((re|fw|fwd|odp|vs)\s*:\s*)+", "", (s or ""), flags=re.I).strip().lower()
+
+
+def _fetch_drafts(mb, uids, tz):
+    """Koncepty včetně náhledu textu (BODY.PEEK[], plain text, prvních PREVIEW_MAX znaků); nic neoznačuje."""
+    from .imap_client import body_text
+    out = []
+    for uid in uids:
+        try:
+            typ, data = mb.conn.uid("FETCH", uid, "(FLAGS BODY.PEEK[])")
+            if typ != "OK" or not data or not isinstance(data[0], tuple):
+                continue
+            meta = data[0][0].decode("ascii", "replace")
+            m = re.search(r"FLAGS \(([^)]*)\)", meta)
+            h = _parse_headers(data[0][1], m.group(1) if m else "")
+            if not h:
+                continue
+            h["dt"] = h["dt"].astimezone(tz)
+            try:
+                h["preview"] = body_text(email.message_from_bytes(data[0][1]))[:PREVIEW_MAX]
+            except Exception:
+                h["preview"] = ""
+            out.append(h)
+        except Exception:
+            continue
+    return out
 
 
 def _short(m, folder=None):
@@ -138,12 +169,22 @@ def build(folder_msgs, stat_msgs, drafts, now, reply_hours=None, reply_count=0, 
             uniq.append(it)
 
     drafts = sorted(drafts, key=lambda m: m["dt"], reverse=True)
+    imp_subj = {_norm_subject(it["subject"]) for it in uniq}
+    imp_ids = {m["message_id"] for msgs in folder_msgs.values() for m in msgs
+               if m.get("flagged") and m.get("message_id")}
+
+    def draft_important(d):
+        return bool(d.get("flagged") or (d.get("in_reply_to") and d["in_reply_to"] in imp_ids)
+                    or (d["subject"] and _norm_subject(d["subject"]) in imp_subj))
+
     return {
         "source": source,
         "generated": now.isoformat(),
         "folders": folders,
         "drafts": {"count": drafts_total if drafts_total is not None else len(drafts),
-                   "items": [{"subject": d["subject"], "to": d["to"], "date": d["dt"].isoformat()}
+                   "items": [{"subject": d["subject"], "to": d["to"], "date": d["dt"].isoformat(),
+                              "preview": (d.get("preview") or "")[:PREVIEW_MAX],
+                              "important": draft_important(d)}
                              for d in drafts[:MAX_DRAFTS]]},
         "top_senders": {"week": top(week), "month": top(month)},
         "reply": {"avg_hours": reply_hours, "count": reply_count},
@@ -176,7 +217,9 @@ def collect(mb, now=None):
             mb._select(config.FOLDER_DRAFTS, readonly=True)
             uids = mb._search("ALL")
             total = len(uids)
-            drafts = _fetch_headers(mb, uids[-MAX_DRAFTS:], tz)
+            drafts = _fetch_drafts(mb, uids[-MAX_DRAFTS:], tz)
+            if not drafts and uids:
+                drafts = _fetch_headers(mb, uids[-MAX_DRAFTS:], tz)
         except Exception:
             pass
 

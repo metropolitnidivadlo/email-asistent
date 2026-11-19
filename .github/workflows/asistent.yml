@@ -24,6 +24,13 @@ jobs:
           node-version: "20"
       - run: npm install -g @anthropic-ai/claude-code
       - run: pip install -r requirements.txt
+      - name: Schválené koncepty z Telegramu
+        run: python run.py telegram-akce
+        env:
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+          IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       - name: Ostrý běh
         run: python run.py ostre
         env:

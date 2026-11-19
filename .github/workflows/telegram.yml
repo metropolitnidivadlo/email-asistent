@@ -1,0 +1,28 @@
+name: Telegram schvalování
+
+on:
+  schedule:
+    - cron: "*/5 4-21 * * *"   # UTC
+  workflow_dispatch:
+
+concurrency:
+  group: asistent-telegram
+  cancel-in-progress: false
+
+jobs:
+  akce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Schválené koncepty z Telegramu
+        run: python run.py telegram-akce
+        env:
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+          IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

@@ -57,10 +57,11 @@ class Render(unittest.TestCase):
 
     def test_pet_sekci_a_prazdne(self):
         out = kokpit.render(self._data([]))
-        for h in ("Dnes", "Pošta", "Představení a doprava", "Statistiky a finance", "Nové příležitosti"):
+        for h in ("Koncepty k odeslání", "Úkoly a připomínky", "Důležité dnes", "Pošta podle složek",
+                  "Představení a doprava", "Statistiky a finance", "Nové příležitosti"):
             self.assertIn(f">{h}</h2>", out)
         self.assertIn("Databáze kontaktů zatím není nahraná.", out)
-        self.assertEqual(out.count("<section"), 5)
+        self.assertEqual(out.count("<section"), 7)
 
     def test_escape_a_odkazy(self):
         k = kontakty.parse_csv(CSV)

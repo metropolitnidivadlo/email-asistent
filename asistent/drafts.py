@@ -40,6 +40,9 @@ def build_message(em, body, from_addr):
     msg["To"] = f"{em.from_name} <{em.from_addr}>" if em.from_name else em.from_addr
     subj = em.subject or ""
     msg["Subject"] = subj if subj.lower().startswith("re:") else f"Re: {subj}"
+    from email.utils import formatdate, make_msgid
+    msg["Date"] = formatdate(localtime=True)
+    msg["Message-ID"] = make_msgid(domain="metropolitnidivadlo.cz")
     if em.message_id:
         msg["In-Reply-To"] = em.message_id
         refs = f"{em.in_reply_to} {em.message_id}".strip()

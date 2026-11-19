@@ -96,7 +96,7 @@ class RenderUkoly(unittest.TestCase):
     def test_prazdne(self):
         out = kokpit.render(self._data([]))
         self.assertIn("Zatím žádné úkoly.", out)
-        self.assertEqual(out.count("<h2 "), 5)
+        self.assertEqual(out.count("<h2 "), 7)
 
     def test_bez_klice(self):
         d = self._data([])
@@ -113,8 +113,8 @@ class RenderUkoly(unittest.TestCase):
         self.assertNotIn("<b>pozn", out)
         self.assertEqual(out.count("po termínu"), 1)
         self.assertIn("Vysoká priorita", out)
-        self.assertLess(out.index("Úkoly a připomínky"), out.index("Důležité dnes"))
-        self.assertEqual(out.count("<h2 "), 5)
+        self.assertLess(out.index(">Úkoly a připomínky</h2>"), out.index(">Důležité dnes</h2>"))
+        self.assertEqual(out.count("<h2 "), 7)
 
 
 if __name__ == "__main__":

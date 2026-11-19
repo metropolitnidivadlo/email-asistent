@@ -1,11 +1,12 @@
-﻿"""Příkazová řádka e-mailového asistenta. Nikdy neodesílá e-maily."""
+﻿"""Příkazová řádka e-mailového asistenta. Odesílá výhradně koncept schválený v Telegramu (telegram-akce)."""
 import argparse
 import json
 import os
+import secrets
 import sys
 from pathlib import Path
 
-from . import ai, classify, config, drafts, modules, souhrny, style, telegram
+from . import ai, classify, config, drafts, modules, souhrny, style, telegram, telegram_akce
 from .imap_client import Mailbox
 from .secrets import get_secret
 
@@ -92,8 +93,17 @@ def cmd_ostre(args):
                     body = drafts.draft_text(em, st)
                     if body:
                         msg = drafts.build_message(em, body, mb.user)
+                        did = secrets.token_hex(4)
+                        msg["X-Asistent-Id"] = did
                         r["koncept"] = mb.append_draft(config.FOLDER_DRAFTS, msg)
                         mb._select("INBOX", readonly=False)
+                        if r["koncept"]:  # karta ke schválení v Telegramu; selhání nesmí shodit zpracování
+                            try:
+                                telegram.send_draft_card(
+                                    did, f"{em.from_name} <{em.from_addr}>".strip(), em.subject,
+                                    r.get("summary", ""), body)
+                            except Exception as e:
+                                print(f"  Karta konceptu se nepodařila ({type(e).__name__})", file=sys.stderr)
                 mb.add_flag(em.uid, config.DONE_KEYWORD)
                 mb.move(em.uid, r["folder"])
                 modules.on_email(em, r)
@@ -120,6 +130,13 @@ def cmd_ostre(args):
     if chyby:
         lines.append(f"Chyby při zpracování: {chyby}")
     telegram.send_summary("\n".join(lines))
+
+
+def cmd_telegram_akce(args):
+    """Zpracuje schválení konceptů z Telegramu (jen koncept po dvojím potvrzení se odešle)."""
+    if args.nanecisto:
+        print("Režim nanečisto: nic se neodesílá, nepotvrzuje ani nemění.")
+    telegram_akce.run(nanecisto=args.nanecisto)
 
 
 def cmd_styl(args):
@@ -276,6 +293,9 @@ def build_parser():
     o = sub.add_parser("ostre", help="ostrý běh (vyžaduje ASISTENT_OSTRE=1)")
     o.add_argument("--ignoruj-cas", action="store_true", help="ignorovat časové okno 7-22 h")
     o.set_defaults(fn=cmd_ostre)
+    ta = sub.add_parser("telegram-akce", help="zpracuje schválení konceptů v Telegramu (Odeslat/Zahodit)")
+    ta.add_argument("--nanecisto", action="store_true", help="jen vypíše, nic nepotvrdí ani neodešle")
+    ta.set_defaults(fn=cmd_telegram_akce)
     s = sub.add_parser("styl", help="vygeneruje profil stylu z odeslané pošty")
     s.add_argument("--obnovit-styl", action="store_true", help="(styl se tímto příkazem vždy přegeneruje)")
     s.set_defaults(fn=cmd_styl)

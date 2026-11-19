@@ -1,7 +1,7 @@
 # E-mailový asistent Metropolitního divadla
 
 Třídí poštu ze schránky info@metropolitnidivadlo.cz (WEDOS), ukládá koncepty odpovědí do složky
-"Koncepty" a posílá souhrn do Telegramu. **Nikdy nic neodesílá e-mailem.**
+"Koncepty" a posílá souhrn do Telegramu. **E-mailem odešle výhradně koncept, který uživatel v Telegramu dvakrát potvrdil (viz „Schvalování v Telegramu“); nic jiného se neodesílá.**
 
 ## Lokální spuštění (Windows)
 
@@ -56,6 +56,21 @@ heslem (staticrypt). Schránku jen čte (readonly, bez těl zpráv), nic neodes�
 2. Svému botovi napište libovolnou zprávu (např. `/start`).
 3. Otevřete v prohlížeči `https://api.telegram.org/bot<TOKEN>/getUpdates` a najděte `"chat":{"id":...}` - to je `TELEGRAM_CHAT_ID`.
 4. Obě hodnoty uložte jako GitHub Secrets (nebo do Klíčenky pod názvy `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`).
+
+## Schvalování v Telegramu
+
+Každý nový koncept dostane id v hlavičce `X-Asistent-Id` a do Telegramu přijde karta (od koho, předmět, shrnutí,
+text konceptu do 3500 znaků) s tlačítky [✅ Odeslat] a [🗑 Zahodit].
+
+- Odeslat > „Opravdu odeslat na …?“ > [Ano, odeslat] / [Zpět]. Teprve „Ano“ odešle koncept přes SMTP
+  (`wes1-smtp.wedos.net:465`, jiný host přes `SMTP_HOST`; stejné přihlášení jako IMAP). Koncept se smaže z Koncepty,
+  kopie jde do Odeslaných (`\Seen`), původní mail dostane `\Answered`.
+- Koncept, který už ve složce není (smazán/odeslán v Outlooku), se neodešle. Koncept s `[DOPLNIT]` se neodešle
+  (doplňte ho v Outlooku). Selže-li SMTP, koncept zůstává a přijde „❌ Odeslání selhalo“.
+- Když koncept v Outlooku upravíte a hlavička `X-Asistent-Id` se ztratí, tlačítko ho nenajde; odešlete ho v Outlooku.
+- `python run.py telegram-akce` zpracuje čekající kliknutí (přijímá jen `TELEGRAM_CHAT_ID`, updates potvrdí hned po
+  načtení, takže se akce neopakuje). `--nanecisto` jen vypíše, nic nepotvrdí ani neodešle (lokálně používejte jen to).
+- Workflow `telegram.yml` běží každých 5 min (UTC 4-21), navíc krok před „Ostrým během“ v `asistent.yml`.
 
 ## Souhrny a úkoly
 
