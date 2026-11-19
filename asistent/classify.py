@@ -1,4 +1,4 @@
-﻿"""Klasifikace e-mailů: nejdřív pravidla, potom Claude, jinak klíčová slova."""
+"""Klasifikace e-mailů: nejdřív pravidla, potom Claude, jinak klíčová slova."""
 import re
 from dataclasses import dataclass, asdict
 
@@ -57,9 +57,14 @@ def keyword_fallback(em):
                   "bez AI - třídění podle klíčových slov", "bez AI")
 
 
+_PREDSTAVENI = ("Máj, Kytice, Balada pro banditu, Tři v tom, Zázračné cvičení, Ze života hmyzu, "
+               "Ať žijí strašidla, Čarodějnický učeň, Jak se čerti ženili, Pejsek a kočička, "
+               "S čerty nejsou žádné žerty, Sněhová královna v Ledovém království")
+
 _SYSTEM = (
     "Jsi asistent šéfa Metropolitního divadla. Třídíš příchozí e-maily do složek:\n"
     + "\n".join(f"- {k}: {v}" for k, v in config.FOLDERS.items())
+    + f"\n\nPředstavení divadla (zmínka názvu obvykle značí poptávku nebo věc kolem hraní): {_PREDSTAVENI}."
     + "\n\nOdpověz POUZE jedním JSON objektem: "
     '{"folder": "<přesný název složky>", "needs_reply": true/false, "important": true/false, '
     '"summary": "1 věta česky", "reason": "krátké zdůvodnění česky"}.\n'

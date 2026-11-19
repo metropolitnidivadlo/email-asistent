@@ -1,4 +1,4 @@
-"""Vykreslení kokpitu do jednoho samostatného HTML (inline CSS, bez externích zdrojů a bez JS)."""
+"""Vykreslení kokpitu do jednoho samostatného HTML (inline CSS, bez JS; jediný externí zdroj je písmo Karla z Google Fonts)."""
 from datetime import datetime
 from html import escape as _esc
 
@@ -6,12 +6,12 @@ from . import config
 
 # Barvy; test v tests/test_kokpit.py z nich počítá kontrast podle WCAG 2.1.
 PALETTES = {
-    "light": {"bg": "#ffffff", "fg": "#1b1b1b", "muted": "#4d4d4d", "box": "#f5f5f5", "border": "#4d4d4d",
-              "rule": "#767676", "head": "#0a3069", "th": "#e2e2e2", "badge_bg": "#8a1c1c",
-              "badge_fg": "#ffffff"},
-    "dark": {"bg": "#121212", "fg": "#f0f0f0", "muted": "#bdbdbd", "box": "#1e1e1e", "border": "#a0a0a0",
-             "rule": "#8a8a8a", "head": "#9ec1ff", "th": "#2e2e2e", "badge_bg": "#ffb3ad",
-             "badge_fg": "#3a0905"},
+    "light": {"bg": "#FFFFFF", "fg": "#171717", "muted": "#4B4B4B", "box": "#F7F5F3", "border": "#8A8A8A",
+              "rule": "#8A8A8A", "head": "#D5291F", "th": "#E9E6E3", "badge_bg": "#B3201A",
+              "badge_fg": "#FFFFFF"},
+    "dark": {"bg": "#0D0D0D", "fg": "#F2F2F2", "muted": "#B8B8B8", "box": "#171717", "border": "#767676",
+             "rule": "#767676", "head": "#FF6B62", "th": "#262626", "badge_bg": "#FF6B62",
+             "badge_fg": "#0D0D0D"},
 }
 # (popředí, pozadí, minimální poměr): text >= 4.5, okraje a ikonky >= 3
 PAIRS = [
@@ -31,16 +31,20 @@ CSS = (
     "@media (prefers-color-scheme:dark){:root{" + _vars(PALETTES["dark"]) + "}}"
     "*{box-sizing:border-box}"
     "body{margin:0;padding:1rem;background:var(--bg);color:var(--fg);"
-    "font:1rem/1.5 system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;overflow-wrap:anywhere}"
+    "font:1rem/1.5 'Karla',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;overflow-wrap:anywhere}"
     "main,header{max-width:60rem;margin:0 auto}"
     "h1{font-size:1.6rem;margin:0 0 .25rem}"
+    ".pruh{height:6px;background:var(--head);margin:-1rem -1rem 1rem}"
+    ".znacka{margin:0 0 .25rem;color:var(--head);font-weight:600;text-transform:uppercase;letter-spacing:.12em}"
     ".gen{color:var(--muted);margin:0 0 .75rem}"
     ".obnovit{display:inline-block;margin:0 0 1.5rem;padding:.5rem 1rem;border:2px solid var(--border);"
-    "border-radius:6px;background:var(--box);color:var(--head);font-weight:600;text-decoration:none}"
+    "border-radius:0;background:var(--box);color:var(--head);font-weight:600;text-decoration:none;"
+    "text-transform:uppercase;letter-spacing:.08em}"
     ".obnovit:hover,.obnovit:focus{text-decoration:underline;outline:3px solid var(--border);outline-offset:2px}"
-    "section{border:2px solid var(--border);border-radius:8px;background:var(--box);"
+    "section{border:2px solid var(--border);border-radius:0;background:var(--box);"
     "padding:1rem;margin:0 0 2rem}"
     "section>h2{font-size:1.35rem;margin:0 0 1rem;padding-bottom:.5rem;color:var(--head);"
+    "text-transform:uppercase;letter-spacing:.08em;"
     "border-bottom:2px solid var(--border)}"
     "h3{font-size:1.1rem;margin:1.25rem 0 .5rem;color:var(--head)}"
     "table{border-collapse:collapse;width:100%;margin:0 0 1rem;font-size:.9rem}"
@@ -51,10 +55,10 @@ CSS = (
     "td.n,th.n{text-align:right}"
     ".nowrap{white-space:nowrap}"
     ".badge{display:inline-block;background:var(--badge_bg);color:var(--badge_fg);"
-    "border-radius:4px;padding:0 .4rem;font-size:.8rem;font-weight:700;margin-right:.35rem}"
+    "border-radius:0;padding:0 .4rem;font-size:.8rem;font-weight:700;margin-right:.35rem}"
     ".muted{color:var(--muted)}"
     "p{margin:.25rem 0 .75rem}"
-    "@media (max-width:480px){body{padding:.5rem}section{padding:.6rem}"
+    "@media (max-width:480px){body{padding:.5rem}.pruh{margin:-.5rem -.5rem 1rem}section{padding:.6rem}"
     "table{font-size:.8rem}th,td{padding:.25rem .3rem}}"
 )
 
@@ -247,8 +251,12 @@ def render(data):
         "<meta name=\"color-scheme\" content=\"light dark\"><meta name=\"robots\" content=\"noindex\">"
         "<meta http-equiv=\"refresh\" content=\"300\">"
         "<title>Kokpit – Metropolitní divadlo</title>"
+        "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">"
+        "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>"
+        "<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&display=swap\">"
         f"<style>{CSS}</style></head><body>"
-        "<header><h1>Kokpit – Metropolitní divadlo</h1>"
+        "<div class=\"pruh\" aria-hidden=\"true\"></div>"
+        "<header><p class=\"znacka\">Metropolitní divadlo Praha</p><h1>Kokpit – Metropolitní divadlo</h1>"
         f"<p class=\"gen\">Aktualizováno: {e(_fmt_full(gen))} ({e(config.TZ_NAME)}){e(note)}"
         " · data se obnovují každých 15 min, stránka se sama načte každých 5 min</p>"
         f"<p><a class=\"obnovit\" href=\"{e(OBNOVIT_URL)}\" target=\"_blank\" rel=\"noopener\">"

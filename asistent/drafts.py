@@ -1,7 +1,7 @@
-﻿"""Koncepty odpovědí. NIKDY se neodesílají - pouze se ukládají do složky Koncepty."""
+"""Koncepty odpovědí. NIKDY se neodesílají - pouze se ukládají do složky Koncepty."""
 from email.message import EmailMessage
 
-from . import ai
+from . import ai, config
 
 _SYSTEM = (
     "Jsi asistent šéfa Metropolitního divadla. Napiš v češtině koncept odpovědi na přijatý e-mail "
@@ -11,11 +11,27 @@ _SYSTEM = (
 )
 
 
+_ZNALOSTI = config.ROOT / "znalosti" / "divadlo.md"
+_POKYN_ZNALOSTI = (
+    "\n\nZNALOSTI O DIVADLE (pouze data z webu): používej jen fakta odtud (názvy představení, délky, počty herců, "
+    "kontakty). Ceny, termíny a technické požadavky NEUVÁDĚJ (na webu nejsou); místo nich napiš [DOPLNIT: ...]."
+)
+
+
+def _znalosti():
+    try:
+        return _ZNALOSTI.read_text(encoding="utf-8")[:12000]
+    except OSError:
+        return ""
+
+
 def draft_text(em, style):
     """Vrátí text konceptu, nebo None (bez AI)."""
     user = (f"PROFIL STYLU:\n{style}\n\nPŘIJATÝ E-MAIL\nOd: {em.from_name} <{em.from_addr}>\n"
             f"Předmět: {em.subject}\n\n{em.text[:4000]}")
-    return ai.ask_text(user, _SYSTEM) or None
+    zn = _znalosti()
+    system = _SYSTEM + (_POKYN_ZNALOSTI + "\n\n" + zn if zn else "")
+    return ai.ask_text(user, system) or None
 
 
 def build_message(em, body, from_addr):
