@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 site/
 STAV.md
+spoustec/spoustec.log
