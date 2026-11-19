@@ -3,7 +3,7 @@ name: E-mailový asistent
 on:
   # Ostrý provoz schválen uživatelem 19. 11. 2026.
   schedule:
-    - cron: "*/30 4-21 * * *"   # UTC; skutečné okno 7-22 h Europe/Prague hlídá kód
+    - cron: "*/15 4-21 * * *"   # UTC; skutečné okno 7-22 h Europe/Prague hlídá kód
   workflow_dispatch:
 
 concurrency:
