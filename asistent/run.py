@@ -6,7 +6,7 @@ import secrets
 import sys
 from pathlib import Path
 
-from . import ai, classify, config, drafts, modules, souhrny, style, telegram, telegram_akce
+from . import ai, classify, config, drafts, modules, priznaky, souhrny, style, telegram, telegram_akce
 from .imap_client import Mailbox
 from .secrets import get_secret
 
@@ -80,6 +80,7 @@ def cmd_ostre(args):
                                   create=True)
         if zbyva:
             print(f"Nepodařilo se vytvořit složky: {', '.join(zbyva)}")
+        priznaky.synchronizuj(mb)  # přečteno/odpovězeno z INBOX na kopie ve složkách
         emails = mb.fetch_unprocessed("INBOX")
         print(f"Ke zpracování: {len(emails)} zpráv.")
         for em in emails:
