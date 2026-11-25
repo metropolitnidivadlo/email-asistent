@@ -2,7 +2,7 @@ name: Kokpit
 
 on:
   schedule:
-    - cron: "*/15 4-21 * * *"   # UTC (každých 15 min, cca 5–22 h Praha)
+    - cron: "7 4-21 * * *"   # UTC, záloha 1× za hodinu (každých 15 min spouští PC spouštěč)
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -52,10 +52,18 @@ jobs:
           test -f site/out/index.html
           ls site/out
           if grep -q "Kokpit – Metropolitní divadlo</h1>" site/out/index.html; then echo "Nešifrovaný obsah!"; exit 1; fi
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site/out
       - name: Nasadit na GitHub Pages
         id: deploy
-        uses: actions/deploy-pages@v4
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+      - name: Počkat před druhým pokusem
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 30
+      - name: Nasadit na GitHub Pages (2. pokus)
+        id: deploy2
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v5
