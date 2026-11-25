@@ -47,6 +47,14 @@ def build_message(em, body, from_addr):
         msg["In-Reply-To"] = em.message_id
         refs = f"{em.in_reply_to} {em.message_id}".strip()
         msg["References"] = refs
-    msg.set_content(body)
+    msg.set_content(body.rstrip() + "\n\n" + citace(em))
     return msg
+
+
+def citace(em):
+    """Původní zpráva pod odpovědí, jako při Odpovědět v Outlooku."""
+    od = f"{em.from_name} <{em.from_addr}>" if em.from_name else em.from_addr
+    hlava = (f"________________________________\n"
+             f"Od: {od}\nOdesláno: {em.date}\nKomu: {em.to}\nPředmět: {em.subject}\n")
+    return hlava + "\n" + (em.text or "").strip() + "\n"
 

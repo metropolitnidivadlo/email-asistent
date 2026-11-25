@@ -162,7 +162,7 @@ def handle(act, mb, nanecisto=False):
 
     if a == "sendok":
         to = _recipient(raw)
-        if "[DOPLNIT" in plain_body(raw):
+        if "[DOPLNIT" in plain_body(raw).split("________________________________")[0]:  # jen odpověď, ne citace
             telegram.edit_message(chat, mid, "⚠ Koncept obsahuje [DOPLNIT] a neodeslal se. "
                                   "Doplňte ho v Outlooku a odešlete ručně.")
             return ans("Obsahuje [DOPLNIT]")
