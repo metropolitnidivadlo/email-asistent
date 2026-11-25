@@ -306,6 +306,15 @@ class Mailbox:
               f"originál zůstal v INBOX s příznakem {config.DONE_KEYWORD}", file=sys.stderr)
         return True
 
+    def copy(self, uid, folder):
+        """Zkopíruje zprávu do složky; originál zůstává v Doručené poště."""
+        real = self.resolve(folder) or (self.prefix + folder)
+        typ, _ = self.conn.uid("COPY", uid, self._q(real))
+        if typ != "OK":
+            print(f"  [IMAP] kopie UID {uid} do '{folder}' selhala", file=sys.stderr)
+            return False
+        return True
+
     def append_draft(self, folder, msg: EmailMessage):
         real = self.resolve(folder) or (self.prefix + folder)
         typ, _ = self.conn.append(self._q(real), "(\\Draft \\Seen)",

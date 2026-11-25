@@ -4,7 +4,7 @@ Ahoj, tohle je e-mailový asistent pro šéfa Metropolitního divadla Praha. Pro
 Na konci je **hotový prompt**: stačí si repozitář naklonovat a vložit prompt do Claude Code.
 
 ## Co to dělá
-- **Pošta (IMAP, WEDOS `wes1-imap.wedos.net`):** nové e-maily z Doručené pošty třídí do složek *Představení a zájezdy, Doprava, Nabídky a objednávky, Faktury a finance, Ostatní, Newslettery*.
+- **Pošta (IMAP, WEDOS `wes1-imap.wedos.net`):** nové e-maily z Doručené pošty třídí (kopie, originál zůstává v Doručené poště) do složek *Představení a zájezdy, Doprava, Nabídky a objednávky, Faktury a finance, Ostatní, Newslettery*.
 - **Koncepty odpovědí** píše ve stylu šéfa, který se naučil z odeslané pošty. Ukládá je do složky *Koncepty*, takže jsou vidět v Outlooku. Chybějící fakta (ceny, termíny) označí `[DOPLNIT: …]`.
 - **Telegram:** po každém průchodu pošle souhrn. Ke každému konceptu přijde karta s tlačítky ✅ Odeslat / 🗑 Zahodit. Odeslání se ještě jednou potvrzuje, mail pak odejde přes SMTP WEDOS. Koncept s `[DOPLNIT]` se odeslat nedá.
 - **Kokpit:** statická stránka na GitHub Pages, šifrovaná přes staticrypt heslem z GitHub Secrets. Obsahuje KPI, koncepty k odeslání, úkoly, poštu podle složek, statistiky a *Nové příležitosti* (databázi kulturních domů a divadel v ČR).

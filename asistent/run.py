@@ -105,7 +105,7 @@ def cmd_ostre(args):
                             except Exception as e:
                                 print(f"  Karta konceptu se nepodařila ({type(e).__name__})", file=sys.stderr)
                 mb.add_flag(em.uid, config.DONE_KEYWORD)
-                mb.move(em.uid, r["folder"])
+                mb.copy(em.uid, r["folder"])  # originál zůstává v Doručené poště
                 modules.on_email(em, r)
                 results.append({"predmet": em.subject, "od": em.from_addr, "uid": em.uid,
                                 "datum": em.date, **r})
